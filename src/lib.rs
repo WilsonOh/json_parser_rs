@@ -1,12 +1,18 @@
+pub mod nom_json;
+
 #[derive(Debug, PartialEq)]
 pub enum JsonValue {
     Bool(bool),
     String(String),
     // Support only unsigned ints for now
-    Number(u64),
+    Number(i64),
     Null,
     Array(Vec<JsonValue>),
     Object(Vec<(String, JsonValue)>),
+}
+
+pub fn parse_json(input: &str) -> Option<JsonValue> {
+    parse_json_value(input.as_bytes()).map(|(_, val)| val)
 }
 
 fn parse_char(input: &[u8], c: u8) -> Option<(&[u8], u8)> {
@@ -51,7 +57,7 @@ fn parse_json_string_literal(input: &[u8]) -> Option<(&[u8], JsonValue)> {
     parse_string_literal(input).map(|(rest, s)| (rest, JsonValue::String(s)))
 }
 
-pub fn parse_json_value(input: &[u8]) -> Option<(&[u8], JsonValue)> {
+fn parse_json_value(input: &[u8]) -> Option<(&[u8], JsonValue)> {
     parse_json_string_literal(input)
         .or(parse_null(input))
         .or(parse_json_string_literal(input))
@@ -61,7 +67,7 @@ pub fn parse_json_value(input: &[u8]) -> Option<(&[u8], JsonValue)> {
         .or(parse_object(input))
 }
 
-pub fn skip_whitespace(input: &[u8]) -> &[u8] {
+fn skip_whitespace(input: &[u8]) -> &[u8] {
     for (i, c) in input.iter().enumerate() {
         if !c.is_ascii_whitespace() {
             return &input[i..];
@@ -70,7 +76,7 @@ pub fn skip_whitespace(input: &[u8]) -> &[u8] {
     &[]
 }
 
-pub fn parse_array(input: &[u8]) -> Option<(&[u8], JsonValue)> {
+fn parse_array(input: &[u8]) -> Option<(&[u8], JsonValue)> {
     let (mut input, _) = parse_char(input, b'[')?;
     input = skip_whitespace(input);
     let mut buf = Vec::new();
@@ -90,7 +96,7 @@ pub fn parse_array(input: &[u8]) -> Option<(&[u8], JsonValue)> {
     None
 }
 
-pub fn parse_object(input: &[u8]) -> Option<(&[u8], JsonValue)> {
+fn parse_object(input: &[u8]) -> Option<(&[u8], JsonValue)> {
     let (mut input, _) = parse_char(input, b'{')?;
     input = skip_whitespace(input);
     let mut m = Vec::new();
