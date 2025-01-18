@@ -46,3 +46,37 @@ pub fn format_json(
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::nom_json::parse_json;
+
+    use super::format_json;
+
+    #[test]
+    fn formatter_test() {
+        let input = r#"{"foo":"bar","other":[1,2,3,{"baz":null}]}"#;
+        let json = parse_json(input).unwrap();
+        let formatted = format_json(&json, 2, 1, false);
+        let expected = "{\n  \"foo\": \"bar\",\n  \"other\": [\n    1,\n    2,\n    3,\n    {\n      \"baz\": null\n    }\n  ]\n}";
+        assert_eq!(formatted, expected);
+    }
+
+    #[test]
+    fn formatter_indent_level_test() {
+        let input = r#"{"foo":"bar","other":[1,2,3,{"baz":null}]}"#;
+        let json = parse_json(input).unwrap();
+        let formatted = format_json(&json, 4, 1, false);
+        let expected = "{\n    \"foo\": \"bar\",\n    \"other\": [\n        1,\n        2,\n        3,\n        {\n            \"baz\": null\n        }\n    ]\n}";
+        assert_eq!(formatted, expected);
+    }
+
+    #[test]
+    fn formatter_compact_test() {
+        let input = "{\n    \"foo\": \"bar\",\n    \"other\": [\n        1,\n        2,\n        3,\n        {\n            \"baz\": null\n        }\n    ]\n}";
+        let json = parse_json(input).unwrap();
+        let formatted = format_json(&json, 2, 1, true);
+        let expected = "{\"foo\":\"bar\",\"other\":[1,2,3,{\"baz\":null}]}";
+        assert_eq!(formatted, expected);
+    }
+}

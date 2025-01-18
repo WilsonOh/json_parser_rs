@@ -2,16 +2,16 @@ pub mod formatter;
 pub mod nom_json;
 
 #[derive(Debug, PartialEq)]
-pub enum Number {
-    Float(f32),
-    Int(i32),
+pub enum Number<'a> {
+    Float(&'a str),
+    Int(&'a str),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum JsonValue<'a> {
     Bool(bool),
     String(&'a str),
-    Number(Number),
+    Number(Number<'a>),
     Null,
     Array(Vec<JsonValue<'a>>),
     Object(Vec<(&'a str, JsonValue<'a>)>),
@@ -128,27 +128,22 @@ fn parse_object(input: &[u8]) -> Option<(&[u8], JsonValue)> {
 }
 
 fn parse_number(input: &[u8]) -> Option<(&[u8], JsonValue)> {
-    let mut num_str = String::new();
     for (i, c) in input.iter().enumerate() {
-        if c.is_ascii_digit() {
-            num_str.push(*c as char);
-        } else if num_str.is_empty() {
-            return None;
-        } else {
-            return Some((
-                &input[i..],
-                JsonValue::Number(Number::Int(num_str.parse().unwrap())),
-            ));
+        if !c.is_ascii_digit() {
+            if i == 0 {
+                return None;
+            } else {
+                return Some((
+                    &input[i..],
+                    JsonValue::Number(Number::Int(std::str::from_utf8(&input[..i]).unwrap())),
+                ));
+            }
         }
     }
-    if num_str.is_empty() {
-        None
-    } else {
-        Some((
-            &[],
-            JsonValue::Number(Number::Int(num_str.parse().unwrap())),
-        ))
-    }
+    Some((
+        &[],
+        JsonValue::Number(Number::Int(std::str::from_utf8(input).unwrap())),
+    ))
 }
 
 #[cfg(test)]
@@ -207,7 +202,7 @@ mod tests {
     fn test_parse_number() {
         assert_eq!(
             parse_number(b"12345"),
-            Some(("".as_bytes(), JsonValue::Number(Number::Int(12345))))
+            Some(("".as_bytes(), JsonValue::Number(Number::Int("12345"))))
         );
     }
 
@@ -231,8 +226,8 @@ mod tests {
                     (
                         "friends",
                         JsonValue::Array(vec![
-                            JsonValue::Number(Number::Int(1)),
-                            JsonValue::Number(Number::Int(2)),
+                            JsonValue::Number(Number::Int("1")),
+                            JsonValue::Number(Number::Int("2")),
                             JsonValue::Bool(true)
                         ])
                     ),
@@ -270,9 +265,9 @@ mod tests {
                     JsonValue::Bool(true),
                     JsonValue::Null,
                     JsonValue::Array(vec![
-                        JsonValue::Number(Number::Int(1)),
-                        JsonValue::Number(Number::Int(2)),
-                        JsonValue::Number(Number::Int(3)),
+                        JsonValue::Number(Number::Int("1")),
+                        JsonValue::Number(Number::Int("2")),
+                        JsonValue::Number(Number::Int("3")),
                         JsonValue::Bool(true),
                         JsonValue::Array(vec![JsonValue::Bool(false)])
                     ])

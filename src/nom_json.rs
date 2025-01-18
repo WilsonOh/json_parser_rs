@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::{complete::tag, streaming::take_while},
     character::complete::{char, multispace0, one_of},
-    combinator::{map, map_res, recognize, value},
+    combinator::{map, recognize, value},
     error::ParseError,
     multi::{many0, many1, separated_list0},
     number::complete::recognize_float,
@@ -47,16 +47,11 @@ fn recognize_integer(input: &str) -> IResult<&str, &str> {
 }
 
 fn parse_float(input: &str) -> JsonResult {
-    map(map_res(recognize_float, |s: &str| s.parse::<f32>()), |n| {
-        JsonValue::Number(Number::Float(n))
-    })(input)
+    map(recognize_float, |n| JsonValue::Number(Number::Float(n)))(input)
 }
 
 fn parse_integer(input: &str) -> JsonResult {
-    map(
-        map_res(recognize_integer, |s: &str| s.parse::<i32>()),
-        |n| JsonValue::Number(Number::Int(n)),
-    )(input)
+    map(recognize_integer, |n| JsonValue::Number(Number::Int(n)))(input)
 }
 
 fn parse_json_array(input: &str) -> JsonResult {
@@ -113,19 +108,19 @@ mod tests {
     fn parse_number_test() {
         assert_eq!(
             parse_float("1.23"),
-            Ok(("", JsonValue::Number(Number::Float(1.23))))
+            Ok(("", JsonValue::Number(Number::Float("1.23"))))
         );
         assert_eq!(
             parse_float("1e8"),
-            Ok(("", JsonValue::Number(Number::Float(1e8))))
+            Ok(("", JsonValue::Number(Number::Float("1e8"))))
         );
         assert_eq!(
             parse_float("123"),
-            Ok(("", JsonValue::Number(Number::Float(123.))))
+            Ok(("", JsonValue::Number(Number::Float("123"))))
         );
         assert_eq!(
             parse_integer("123"),
-            Ok(("", JsonValue::Number(Number::Int(123))))
+            Ok(("", JsonValue::Number(Number::Int("123"))))
         );
     }
 
@@ -157,8 +152,8 @@ mod tests {
             (
                 "friends",
                 JsonValue::Array(vec![
-                    JsonValue::Number(Number::Float(123.0)),
-                    JsonValue::Number(Number::Float(1.23)),
+                    JsonValue::Number(Number::Float("123")),
+                    JsonValue::Number(Number::Float("1.23")),
                     JsonValue::Object(vec![("bar", JsonValue::String("baz"))]),
                 ]),
             ),
@@ -200,8 +195,8 @@ mod tests {
             Ok((
                 "",
                 JsonValue::Array(vec![
-                    JsonValue::Number(Number::Float(123.0)),
-                    JsonValue::Number(Number::Float(1.23)),
+                    JsonValue::Number(Number::Float("123")),
+                    JsonValue::Number(Number::Float("1.23")),
                     JsonValue::Bool(true),
                     JsonValue::String("hello world"),
                     JsonValue::Array(vec![JsonValue::Bool(false)])
