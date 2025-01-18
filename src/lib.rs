@@ -1,14 +1,20 @@
+pub mod formatter;
 pub mod nom_json;
 
 #[derive(Debug, PartialEq)]
-pub enum JsonValue {
+pub enum Number {
+    Float(f32),
+    Int(i32),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum JsonValue<'a> {
     Bool(bool),
-    String(String),
-    // Support only unsigned ints for now
-    Number(i64),
+    String(&'a str),
+    Number(Number),
     Null,
-    Array(Vec<JsonValue>),
-    Object(Vec<(String, JsonValue)>),
+    Array(Vec<JsonValue<'a>>),
+    Object(Vec<(&'a str, JsonValue<'a>)>),
 }
 
 pub fn parse_json(input: &str) -> Option<JsonValue> {
@@ -41,13 +47,13 @@ fn parse_bool(input: &[u8]) -> Option<(&[u8], JsonValue)> {
         .map(|(rest, b)| (rest, JsonValue::Bool(b == b"true")))
 }
 
-fn parse_string_literal(input: &[u8]) -> Option<(&[u8], String)> {
+fn parse_string_literal(input: &[u8]) -> Option<(&[u8], &str)> {
     let (input, _) = parse_char(input, b'"')?;
     for (index, &ch) in input.iter().enumerate() {
         if let b'"' = ch {
             return Some((
                 &input[index + 1..],
-                (String::from_utf8((input[..index]).to_vec())).unwrap(),
+                (std::str::from_utf8(&input[..index])).unwrap(),
             ));
         }
     }
@@ -129,13 +135,19 @@ fn parse_number(input: &[u8]) -> Option<(&[u8], JsonValue)> {
         } else if num_str.is_empty() {
             return None;
         } else {
-            return Some((&input[i..], JsonValue::Number(num_str.parse().unwrap())));
+            return Some((
+                &input[i..],
+                JsonValue::Number(Number::Int(num_str.parse().unwrap())),
+            ));
         }
     }
     if num_str.is_empty() {
         None
     } else {
-        Some((&[], JsonValue::Number(num_str.parse().unwrap())))
+        Some((
+            &[],
+            JsonValue::Number(Number::Int(num_str.parse().unwrap())),
+        ))
     }
 }
 
@@ -187,10 +199,7 @@ mod tests {
     fn test_parse_string_literal() {
         assert_eq!(
             parse_json_string_literal(b"\"hello world123\": true"),
-            Some((
-                ": true".as_bytes(),
-                JsonValue::String("hello world123".to_string())
-            ))
+            Some((": true".as_bytes(), JsonValue::String("hello world123")))
         );
     }
 
@@ -198,7 +207,7 @@ mod tests {
     fn test_parse_number() {
         assert_eq!(
             parse_number(b"12345"),
-            Some(("".as_bytes(), JsonValue::Number(12345)))
+            Some(("".as_bytes(), JsonValue::Number(Number::Int(12345))))
         );
     }
 
@@ -218,21 +227,18 @@ mod tests {
             Some((
                 "".as_bytes(),
                 JsonValue::Object(vec![
-                    ("test".to_string(), JsonValue::Bool(false)),
+                    ("test", JsonValue::Bool(false)),
                     (
-                        "friends".to_string(),
+                        "friends",
                         JsonValue::Array(vec![
-                            JsonValue::Number(1),
-                            JsonValue::Number(2),
+                            JsonValue::Number(Number::Int(1)),
+                            JsonValue::Number(Number::Int(2)),
                             JsonValue::Bool(true)
                         ])
                     ),
                     (
-                        "hi".to_string(),
-                        JsonValue::Object(vec![(
-                            "another".to_string(),
-                            JsonValue::String("one".to_string())
-                        )])
+                        "hi",
+                        JsonValue::Object(vec![("another", JsonValue::String("one"))])
                     )
                 ])
             ))
@@ -246,7 +252,7 @@ mod tests {
             Some((
                 "".as_bytes(),
                 JsonValue::Array(vec![
-                    JsonValue::String("hello".to_string()),
+                    JsonValue::String("hello"),
                     JsonValue::Bool(true),
                     JsonValue::Null
                 ])
@@ -260,13 +266,13 @@ mod tests {
             Some((
                 "".as_bytes(),
                 JsonValue::Array(vec![
-                    JsonValue::String("hello".to_string()),
+                    JsonValue::String("hello"),
                     JsonValue::Bool(true),
                     JsonValue::Null,
                     JsonValue::Array(vec![
-                        JsonValue::Number(1),
-                        JsonValue::Number(2),
-                        JsonValue::Number(3),
+                        JsonValue::Number(Number::Int(1)),
+                        JsonValue::Number(Number::Int(2)),
+                        JsonValue::Number(Number::Int(3)),
                         JsonValue::Bool(true),
                         JsonValue::Array(vec![JsonValue::Bool(false)])
                     ])

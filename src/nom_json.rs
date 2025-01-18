@@ -10,21 +10,7 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, PartialEq)]
-pub enum Number {
-    Float(f32),
-    Int(i32),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum JsonValue<'a> {
-    Bool(bool),
-    String(&'a str),
-    Number(Number),
-    Null,
-    Array(Vec<JsonValue<'a>>),
-    Object(Vec<(&'a str, JsonValue<'a>)>),
-}
+use crate::{JsonValue, Number};
 
 type JsonResult<'a> = IResult<&'a str, JsonValue<'a>>;
 
